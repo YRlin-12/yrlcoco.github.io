@@ -171,15 +171,15 @@ excerpt_separator: <!--more-->
             draw_ctx.stroke();
         }
 
-        canvas.addEventListener("mousedown", press, false);
-        canvas.addEventListener("mousemove", drag, false);
-        canvas.addEventListener("mouseup", release,false);
-        canvas.addEventListener("mouseout", cancel, false);
+        canvas_sketch.addEventListener("mousedown", press, false);
+        canvas_sketch.addEventListener("mousemove", drag, false);
+        canvas_sketch.addEventListener("mouseup", release,false);
+        canvas_sketch.addEventListener("mouseout", cancel, false);
 
-        canvas.addEventListener("touchstart", press, false);
-        canvas.addEventListener("touchmove", drag, false);
-        canvas.addEventListener("touchend", release, false);
-        canvas.addEventListener("touchcancel", cancel, false);
+        canvas_sketch.addEventListener("touchstart", press, false);
+        canvas_sketch.addEventListener("touchmove", drag, false);
+        canvas_sketch.addEventListener("touchend", release, false);
+        canvas_sketch.addEventListener("touchcancel", cancel, false);
 
         function click_btn_fn(){
             //if (btn_next.textContent == "Next to proceed") {
@@ -257,10 +257,8 @@ excerpt_separator: <!--more-->
                 time--;
                 if (time<0) {
                     record_stroke = false;
-                    ctx_sketch.clearRect(0, 0, canvas.width, canvas.height);
-                    //canvas.style.display = "none";
+                    ctx_sketch.clearRect(0, 0, canvas.width, canvas.height);                    
                     canvas_title.style.display = "none";
-                    //canvas_sketch.style.display = "none";
 
                     btn_accept.style.display = "inline-block";
                     btn_redo.style.display = "inline-block";
