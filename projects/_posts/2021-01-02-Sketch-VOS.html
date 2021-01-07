@@ -17,7 +17,7 @@ excerpt_separator: <!--more-->
         </ul>
     </div>
 
-
+    <br>
     <h2 id="canvas_title", style="text-align: left; display: none"></h2><br>
     <canvas id="show_img" style="border: 3px solid #c3c3c3;  display: none;">Please use a web-browser supporting HTML5 i.e. some latest one like Chromium or Firefox or Chrome or Safari etc.</canvas>
     <br>
@@ -59,14 +59,14 @@ excerpt_separator: <!--more-->
         var img_idx = 0;
 
         press = async function (e) {
-            if (btn_next.disabled && btn_next.textContent == "Next to proceed") {
-                return;
-            }
-            if (btn_next.textContent == "Next to proceed") {
-                console.log("workin...");
-                //verify();
-                return;
-            }
+            // if (btn_next.disabled && btn_next.textContent == "Next to proceed") {
+            //     return;
+            // }
+            // if (btn_next.textContent == "Next to proceed") {
+            //     console.log("press workin...");
+            //     //verify();
+            //     return;
+            // }
             paint = true;
 
             let xy = getXY(e);
@@ -100,10 +100,10 @@ excerpt_separator: <!--more-->
         };
 
         release = function (e) {
-            if (btn_next.textContent == "Next to proceed") {
-                console.log("workin...");
-                return;
-            }
+            // if (btn_next.textContent == "Next to proceed") {
+            //     console.log("workin...");
+            //     return;
+            // }
             let xy = getXY(e);
             let mouseX = xy[0]; let mouseY = xy[1];
             time = new Date();
@@ -173,7 +173,7 @@ excerpt_separator: <!--more-->
 
         canvas.addEventListener("mousedown", press, false);
         canvas.addEventListener("mousemove", drag, false);
-        canvas.addEventListener("mouseup", release);
+        canvas.addEventListener("mouseup", release,false);
         canvas.addEventListener("mouseout", cancel, false);
 
         canvas.addEventListener("touchstart", press, false);
@@ -182,9 +182,10 @@ excerpt_separator: <!--more-->
         canvas.addEventListener("touchcancel", cancel, false);
 
         function click_btn_fn(){
-            if (btn_next.textContent == "Next to proceed") {
+            //if (btn_next.textContent == "Next to proceed") {
                 let img = new Image;
                 const post_json = {"user": String(user_id)};
+
                 let xhr = new XMLHttpRequest();
                 xhr.open("POST", server_url+"/get", true);
                 xhr.setRequestHeader('X-PINGOTHER', 'pingpong');
@@ -193,12 +194,12 @@ excerpt_separator: <!--more-->
                 xhr.setRequestHeader("Access-Control-Allow-Methods", "POST");
                 xhr.setRequestHeader("Access-Control-Allow-Credentials", "true");
                 xhr.onreadystatechange = function () {
-                    // img_url = xhr.responseText;
+                    
                     var response_data = xhr.responseText;
                     img.onload = function() {
-                        ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, canvas.width, canvas.height);
-                        {wait_sketch();}
+                        ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, canvas.width, canvas.height);                
                     }
+                    
                     if (response_data == "None") {
                         alert("All images annotated. Thank you");
                         return;
@@ -207,16 +208,22 @@ excerpt_separator: <!--more-->
                         alert("User_ID not recognised. Please reload page and enter User_ID correctly.");
                         return;
                     } else {
+                        console.log(response_data);
                         response_data = JSON.parse(response_data);
+                        
                         img_url = response_data['img_url'];
-                        img_idx = parseInt(response_data['index']);
-                        img.src = img_url;
-                    }
+                        img_idx = parseInt(response_data['index']);                    
+                        img.src = server_url+img_url; 
+                        console.log('find image at: '+ img.src);            
+                    }                 
                 }
                 xhr.send(JSON.stringify(post_json));
-            } 
-        }
 
+                wait_sketch();
+            }
+             
+        //}
+        
         // function wait_img(){
         //     canvas.style.display = "inline-block";
         //     canvas_title.style.display = "inline-block";
@@ -241,18 +248,19 @@ excerpt_separator: <!--more-->
             canvas_sketch.style.display = "inline-block";
             canvas_title.style.display = "inline-block";
             btn_next.disabled = true;
+            //btn_next.textContent = "Now draw the Sketch";
             btn_clear.style.display = "inline-block";
             record_stroke = true;
-            var time = 120;
+            var time = 15;
             var x = setInterval(function(){
                 canvas_title.textContent = "Quickly Draw a Sketch in "+ time + " seconds."
                 time--;
                 if (time<0) {
                     record_stroke = false;
                     ctx_sketch.clearRect(0, 0, canvas.width, canvas.height);
-                    canvas.style.display = "none";
+                    //canvas.style.display = "none";
                     canvas_title.style.display = "none";
-                    canvas_sketch.style.display = "none";
+                    //canvas_sketch.style.display = "none";
 
                     btn_accept.style.display = "inline-block";
                     btn_redo.style.display = "inline-block";
@@ -265,13 +273,11 @@ excerpt_separator: <!--more-->
 
         function verify () {
             paint = false;
-            canvas.width = Math.round(document.body.offsetWidth * 0.35);
-            canvas_sketch.width = Math.round(document.body.offsetWidth * 0.35);
-            canvas.height = Math.round(document.body.offsetWidth * 0.35);
-            canvas_sketch.height = Math.round(document.body.offsetWidth * 0.35);
-            canvas_sketch.style.display = "inline-block";
-           
-            btn_next.textContent = "Next to proceed";
+            canvas.width = 1280//Math.round(document.body.offsetWidth * 0.5);
+            canvas.height = 720//Math.round(canvas.width*0.66);
+            canvas_sketch.width = 1280//Math.round(document.body.offsetWidth * 1);
+            canvas_sketch.height = 720//Math.round(canvas.width*1);
+            
             canvas_title.textContent = "If you are happy with the (Sketch), enter 'Accept' button. Else you can redraw the sketch using 'Redo' button."
 
             let img = new Image;
@@ -279,7 +285,7 @@ excerpt_separator: <!--more-->
                 ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, canvas.width, canvas.height);
                 redraw(ctx_sketch, canvas_sketch);
             }
-            img.src = img_url;
+            img.src = server_url+img_url;
         }
 
         function clear_btn_fn() {
@@ -331,9 +337,8 @@ excerpt_separator: <!--more-->
                 btn_redo.style.display = "none";
                 
                 
-                canvas.width = Math.round(document.body.offsetWidth * 0.5);
-                // canvas.height = Math.round(document.body.offsetHeight * 0.7);
-                canvas.height = Math.round(canvas.width*0.66);
+                canvas.width = 1280//Math.round(document.body.offsetWidth * 0.5);
+                canvas.height = 720//Math.round(canvas.width*0.66);
                 data = []; // Reset Data
                 start_time = -1;
             }
@@ -342,10 +347,11 @@ excerpt_separator: <!--more-->
 
         function redo_btn_fn() {
             data = [];
-            canvas.width = Math.round(document.body.offsetWidth * 0.5);
-            // canvas.height = Math.round(document.body.offsetHeight * 0.7);
-            canvas.height = Math.round(canvas.width*0.66);
-            canvas_sketch.style.display = "none";
+            canvas.width = 1280//Math.round(document.body.offsetWidth * 0.5);
+            canvas.height = 720//Math.round(canvas.width*0.66);
+            canvas_sketch.width = 1280//Math.round(document.body.offsetWidth * 1);
+            canvas_sketch.height = 720//Math.round(canvas.width*1);
+            canvas_sketch.style.display = "inline-block";
             btn_accept.style.display = "none";
             btn_redo.style.display = "none";
             
