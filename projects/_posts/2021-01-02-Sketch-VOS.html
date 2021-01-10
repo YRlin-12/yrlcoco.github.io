@@ -10,9 +10,11 @@ excerpt_separator: <!--more-->
     <div style="display: inline-block; text-align:left">
         <h3>Instructions:</h3>
         <ul>
-            <li>Click on <b>Next to proceed</b> to view a new Image.</li>
-            <li>The image will be put up for display with the canvas below.</li>
-            <li>Quickly Draw a sketch for the <b>object</b> within <b>bounding box</b> in 2 mins.</li>
+            <li>Click on <b>Next to proceed</b> to view and draw a new Image.</li>
+            <li>The image will be put up for display with the canvas next.</li>
+            <li>Quickly draw a sketch for the <b>object</b> within <b>bounding box</b> in 2 mins.</li>
+            <li>The <b>all parts</b> of this object should be inside the bounding box.</li>
+            <li>Make sure the <b>size</b> of sketch you draw is near to the size of object in the image.</li>
             <li>Please do not draw more than one object for one bounding box.</li>
         </ul>
     </div>
@@ -20,7 +22,6 @@ excerpt_separator: <!--more-->
     <br>
     <h2 id="canvas_title", style="text-align: left; display: none"></h2><br>
     <canvas id="show_img" style="border: 3px solid #c3c3c3;  display: none;">Please use a web-browser supporting HTML5 i.e. some latest one like Chromium or Firefox or Chrome or Safari etc.</canvas>
-    <br>
     <canvas id="show_sketch" style="border: 3px solid #c3c3c3;  display: none;">Please use a web-browser supporting HTML5 i.e. some latest one like Chromium or Firefox or Chrome or Safari etc.</canvas>
     <br>
     <h3 id="Sketch_title", style="text-align: left; display: none"></h2><br>
@@ -44,10 +45,7 @@ excerpt_separator: <!--more-->
         var canvas_title = document.getElementById("canvas_title");
         var sketch_title = document.getElementById("Sketch_title");
 
-        canvas.width = 1280
-        canvas.height = 720
-        canvas_sketch.width = 1280
-        canvas_sketch.height = 720
+       
 
         var btn_next = document.getElementById("btn_next");
         var btn_clear = document.getElementById("btn_clear");
@@ -171,6 +169,8 @@ excerpt_separator: <!--more-->
         canvas_sketch.addEventListener("mousemove", drag, false);
         canvas_sketch.addEventListener("mouseup", release,false);
         canvas_sketch.addEventListener("mouseout", cancel, false);
+        canvas_sketch.addEventListener("mousewheel", zooming, false);
+        
 
         canvas_sketch.addEventListener("touchstart", press, false);
         canvas_sketch.addEventListener("touchmove", drag, false);
@@ -178,7 +178,16 @@ excerpt_separator: <!--more-->
         canvas_sketch.addEventListener("touchcancel", cancel, false);
 
         function click_btn_fn(){
-
+                canvas.width = Math.round(document.body.offsetWidth * 0.47);//1280
+                canvas.height = Math.round(canvas.width * 0.5625);//720
+                canvas_sketch.width = Math.round(document.body.offsetWidth * 0.47);//1280
+                canvas_sketch.height = Math.round(canvas_sketch.width * 0.5625);//720
+                var w_ratio = canvas.width/1280;
+                var h_ratio = canvas.height/720;
+                console.log((canvas.width).toString())
+                console.log((canvas.height).toString())
+                console.log((w_ratio).toString())
+                console.log((h_ratio).toString())
                 ctx_sketch.clearRect(0, 0, canvas_sketch.width, canvas_sketch.height);  
 
                 let img = new Image;
@@ -214,6 +223,7 @@ excerpt_separator: <!--more-->
                         img_url = response_data['img_url'];
                         bbox_cor = response_data['bbox'];
                         bbox_cor = [parseInt(bbox_cor[0]),parseInt(bbox_cor[1]),parseInt(bbox_cor[2]),parseInt(bbox_cor[3])]
+                        bbox_cor = [bbox_cor[0]*w_ratio, bbox_cor[1]*h_ratio, (bbox_cor[2]-bbox_cor[0])*w_ratio, (bbox_cor[3]-bbox_cor[1])*h_ratio]
                         
                         img_idx = parseInt(response_data['index']);                    
                         img.src = server_url + img_url;
@@ -231,43 +241,48 @@ excerpt_separator: <!--more-->
             btn_next.disabled = true;
             btn_clear.style.display = "inline-block";
             record_stroke = true;
-            var time = 15;
-
-            var x = setInterval(function(){
-                canvas_title.textContent = "Quickly Draw a Sketch in "+ time + " seconds."
-                time--;
-                if (time<0) {
-                    record_stroke = false;
-                    ctx_sketch.clearRect(0, 0, canvas.width, canvas.height);                    
-                    canvas_title.style.display = "none";
-                    btn_accept.style.display = "inline-block";
-                    btn_redo.style.display = "inline-block";
-                    btn_clear.style.display = "none";
-                    verify();
-                    sketch_title.style.display = "none";
-                    clearInterval(x);
-                }
-            }, 1000);
-        }
-
-        function verify () {
-            paint = false;
-            canvas.width = 1280;
-            canvas.height = 720;
-            canvas_sketch.width = 1280;
-            canvas_sketch.height = 720;
-            sketch_title.style.display = "inline-block";
-            
+            //var time = 15;
+            canvas_title.textContent = "Please Draw a Sketch in the right canvas."
+            btn_accept.style.display = "inline-block";
+            btn_redo.style.display = "inline-block";
             sketch_title.textContent = "If you are happy with the (Sketch), enter 'Accept' button. Else you can redraw the sketch using 'Redo' button."
 
-            let img = new Image;
-            img.onload = function() {
-                ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, canvas.width, canvas.height);
-                redraw(ctx_sketch, canvas_sketch);
-            }
-            img.src = server_url+img_url;
-            ctx_sketch.strokeRect(bbox_cor[0], bbox_cor[1], bbox_cor[2], bbox_cor[3]);
+
+            // var x = setInterval(function(){
+            //     canvas_title.textContent = "Quickly Draw a Sketch in "+ time + " seconds."
+            //     time--;
+            //     if (time<0) {
+            //         record_stroke = false;
+            //         ctx_sketch.clearRect(0, 0, canvas.width, canvas.height);                    
+            //         canvas_title.style.display = "none";
+            //         btn_accept.style.display = "inline-block";
+            //         btn_redo.style.display = "inline-block";
+            //         btn_clear.style.display = "none";
+            //         verify();
+            //         sketch_title.style.display = "none";
+            //         clearInterval(x);
+            //     }
+            // }, 1000);
         }
+
+        // function verify () {
+        //     paint = false;
+        //     canvas.width = Math.round(document.body.offsetWidth * 0.47);//1280
+        //     canvas.height = Math.round(canvas.width * 0.5625);//720
+        //     canvas_sketch.width = Math.round(document.body.offsetWidth * 0.47);//1280
+        //     canvas_sketch.height = Math.round(canvas_sketch.width * 0.5625);//720
+        //     sketch_title.style.display = "inline-block";
+            
+        //     sketch_title.textContent = "If you are happy with the (Sketch), enter 'Accept' button. Else you can redraw the sketch using 'Redo' button."
+
+        //     let img = new Image;
+        //     img.onload = function() {
+        //         ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, canvas.width, canvas.height);
+        //         redraw(ctx_sketch, canvas_sketch);
+        //     }
+        //     img.src = server_url+img_url;
+        //     ctx_sketch.strokeRect(bbox_cor[0], bbox_cor[1], bbox_cor[2], bbox_cor[3]);
+        // }
 
         function clear_btn_fn() {
             if (data.length == 0) {
@@ -316,10 +331,8 @@ excerpt_separator: <!--more-->
                 btn_next.textContent = "Next to proceed";
                 btn_accept.style.display = "none";
                 btn_redo.style.display = "none";
-                
-                
-                canvas.width = 1280
-                canvas.height = 720
+                btn_clear.style.display = "none";
+            
                 data = []; // Reset Data
                 start_time = -1;
             }
@@ -328,11 +341,6 @@ excerpt_separator: <!--more-->
 
         function redo_btn_fn() {
             data = [];
-            canvas.width = 1280;
-            canvas.height = 720;
-            canvas_sketch.width = 1280;
-            canvas_sketch.height = 720;
-            canvas_sketch.style.display = "inline-block";
             btn_accept.style.display = "none";
             btn_redo.style.display = "none";
             
