@@ -34,9 +34,9 @@ excerpt_separator: <!--more-->
     <button id="btn_verify", style="display: none;", onclick="verify_btn_fn()">Verify</button>
 
     <script type="text/javascript">
-        const server_url = "http://8.136.6.147:8000";
+        //const server_url = "http://8.136.6.147:8000";
         // const server_url = prompt("Enter Server URL with Port number");
-        // const server_url = "http://127.0.0.1:8000";
+        const server_url = "http://127.0.0.1:8000";
         const user_id = prompt('Enter your User ID');
 
         const canvas = document.getElementById("show_img");
@@ -178,11 +178,23 @@ excerpt_separator: <!--more-->
 
         function click_btn_fn(){
             
-                let img = new Image;
                 const post_json = {"user": String(user_id)};
+                canvas.width = Math.round(document.body.offsetWidth * 0.5);
+                canvas.height = Math.round(canvas.width*0.5625); 
+
+                var video = document.createElement('video'); 
+                    video.preload = "auto"; 
+                    video.volume = 0.3;
+                    video.setAttribute('x-webkit-airplay', true);
+                    video.setAttribute('webkit-playsinline', true);
+                    video.setAttribute('webkit-playsinline', 'webkit-playsinline');
+                    video.autoplay = "autoplay";
+                    video.addEventListener("play", function() {
+                            draw(this, canvas, ctx, canvas.width, canvas.height);
+                        }, false)
 
                 let xhr = new XMLHttpRequest();
-                xhr.open("POST", server_url+"/get", true);
+                xhr.open("POST", server_url+"/getvideo", true);
                 xhr.setRequestHeader('X-PINGOTHER', 'pingpong');
                 xhr.setRequestHeader("Content-Type", "application/json");
                 xhr.setRequestHeader("Access-Control-Allow-Origin", "*");
@@ -191,13 +203,8 @@ excerpt_separator: <!--more-->
                 xhr.onreadystatechange = function () {
                     
                     var response_data = xhr.responseText;
-                    img.onload = function() {
-                        canvas.width = Math.round(document.body.offsetWidth * 0.5);
-                        canvas.height = Math.round(canvas.width*0.5625);
-                        ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, canvas.width, canvas.height);
-                        wait_img();
-                    }
-                    
+                    wait_video();
+
                     if (response_data == "None") {
                         alert("All images annotated. Thank you");
                         return;
@@ -208,23 +215,34 @@ excerpt_separator: <!--more-->
                     } else {
 
                         response_data = JSON.parse(response_data);
-                        
+                        console.log(response_data);
                         img_url = response_data['img_url'];
                                       
-                        img_idx = parseInt(response_data['index']);                    
-                        img.src = server_url + img_url;
+                        img_idx = parseInt(response_data['index']);
+                        video.src =  server_url + img_url;
                         
                     }
                 }
                 xhr.send(JSON.stringify(post_json));
-                // wait_sketch();    
             }
         
-        function wait_img(){
+        function draw(v, c, c2, w, h) {
+                if(v.paused || v.ended) {
+                    cancelAnimationFrame(stop);
+                    return false;
+                }
+                c2.drawImage(v, 0, 0, w, h);
+                var stop = requestAnimationFrame(function() {
+                    draw(v, c, c2, w, h);
+                });
+            }
+        
+        function wait_video(){
 
             canvas.style.display = "inline-block";
             canvas_title.style.display = "inline-block";
-            canvas_title.textContent = "Image "+ (img_idx+1) +" out of 100."
+            canvas_title.textContent = "Video "+ (img_idx+1) +" out of 100."
+            
             btn_next.disabled = true;
             btn_draw.style.display = "inline-block";
 
@@ -273,12 +291,20 @@ excerpt_separator: <!--more-->
             btn_redo.style.display = "inline-block";
             btn_clear.style.display = "none";
             
-            let img = new Image;
-            img.onload = function() {
-                ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, canvas.width, canvas.height);
+            var video = document.createElement('video'); 
+                video.preload = "auto"; 
+                video.volume = 0.3;
+                video.setAttribute('x-webkit-airplay', true);
+                video.setAttribute('webkit-playsinline', true);
+                video.setAttribute('webkit-playsinline', 'webkit-playsinline');
+                video.autoplay = "autoplay";
+                video.addEventListener("play", function() {
+                            draw(this, canvas, ctx, canvas.width, canvas.height);
+                        }, false)
+                video.src = server_url+img_url;
+
                 redraw(ctx_sketch, canvas_sketch);
-            }
-            img.src = server_url+img_url;
+            
         }
 
         function clear_btn_fn() {
@@ -306,7 +332,7 @@ excerpt_separator: <!--more-->
             };
             
             let xhr = new XMLHttpRequest();
-            xhr.open("POST", server_url+"/submit", true);
+            xhr.open("POST", server_url+"/submitvideo", true);
             xhr.setRequestHeader('X-PINGOTHER', 'pingpong');
             xhr.setRequestHeader("Content-Type", "application/json");
             xhr.setRequestHeader("Access-Control-Allow-Origin", "*");
