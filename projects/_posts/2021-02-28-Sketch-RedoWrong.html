@@ -1,0 +1,355 @@
+---
+layout: post
+header: false
+comments: false
+excerpt_separator: <!--more-->
+---
+<!--more-->
+<div style="text-align: center;"> 
+    <h1>SketchX VOS Sketching Tool</h1>
+    <div style="display: inline-block; text-align:left">
+        <h3>Instructions:</h3>
+        <ul>
+            <li>Click on <b>Show Image</b> to view a new Video.</li>
+            <li>Remember the object with <b>red mask</b> in the image then click on <b>Draw Sketch</b>.</li>
+            <li>Quickly draw a sketch for the <b>object</b> in 70s.</li>
+            <li>Make sure the <b>shape</b> of sketch you draw is near to the shape of object in the image.</li>
+        </ul>
+    </div>
+
+    <br>
+    <h2 id="canvas_title", style="text-align: left; display: none"></h2><br>
+    <canvas id="show_img" style="border: 3px solid #c3c3c3;  display: none;">Please use a web-browser supporting HTML5 i.e. some latest one like Chromium or Firefox or Chrome or Safari etc.</canvas>
+    <canvas id="show_sketch" style="border: 3px solid #c3c3c3;  display: none;">Please use a web-browser supporting HTML5 i.e. some latest one like Chromium or Firefox or Chrome or Safari etc.</canvas>
+    <br>
+    <h3 id="Sketch_title", style="text-align: left; display: none"></h2><br>
+
+    <button id="btn_next", onclick="click_btn_fn()">Show Image</button>
+    <button id="btn_draw", style="display: none;", onclick="draw_btn_fn()">Draw Sketch</button>
+    <button id="btn_clear", style="display: none;", onclick="clear_btn_fn()">Click to clear</button>
+    <button id="btn_accept", style="display: none;", onclick="accept_btn_fn()">Accept</button>
+    <button id="btn_redo", style="display: none;", onclick="redo_btn_fn()">Redo</button>
+    <button id="btn_verify", style="display: none;", onclick="verify_btn_fn()">Verify</button>
+
+    <script type="text/javascript">
+        const server_url = "http://8.136.6.147:8000";
+        // const server_url = prompt("Enter Server URL with Port number");
+        // const server_url = "http://127.0.0.1:8000";
+        const user_id = prompt('Enter your User ID');
+
+        const canvas = document.getElementById("show_img");
+        var ctx = canvas.getContext("2d");
+        const canvas_sketch = document.getElementById("show_sketch");
+        var ctx_sketch = canvas_sketch.getContext("2d");
+
+        var canvas_title = document.getElementById("canvas_title");
+        var sketch_title = document.getElementById("Sketch_title");
+
+        var btn_next = document.getElementById("btn_next");
+        var btn_draw = document.getElementById("btn_draw");
+        var btn_clear = document.getElementById("btn_clear");
+        var btn_accept = document.getElementById("btn_accept");
+        var btn_redo = document.getElementById("btn_redo");
+        var btn_verify = document.getElementById("btn_verify");
+
+        var record_stroke = false;
+        var data = [];
+        let time;
+        var start_time = -1;
+        var paint = false;
+        var img_url = "";
+        var img_idx = 0;
+
+        press = async function (e) {
+            paint = true;
+
+            let xy = getXY(e);
+            let mouseX = xy[0]; let mouseY = xy[1];
+            time = new Date();
+            if (start_time == -1){
+                start_time = time.getTime();
+                timestamp = 0;
+            }
+            else {timestamp = time.getTime() - start_time;}
+            addClick(mouseX, mouseY, [0, 1, 0], timestamp);
+            redraw(ctx_sketch, canvas_sketch);
+        };
+
+        drag = async function (e) {
+            if (paint && record_stroke) {
+                let xy = getXY(e);
+                let mouseX = xy[0]; let mouseY = xy[1];
+                time = new Date();
+                if (start_time == -1){
+                    start_time = time.getTime();
+                    timestamp = 0;
+                }
+                else {
+                    timestamp = time.getTime() - start_time;
+                }
+                addClick(mouseX, mouseY, [0, 1, 0], timestamp);
+                redraw(ctx_sketch, canvas_sketch);
+            }
+            e.preventDefault();
+        };
+
+        release = function (e) {
+            
+            let xy = getXY(e);
+            let mouseX = xy[0]; let mouseY = xy[1];
+            time = new Date();
+            if (start_time == -1){
+                start_time = time.getTime();
+                timestamp = 0;
+            }
+            else {
+                timestamp = time.getTime() - start_time;
+            }
+            addClick(mouseX, mouseY, [1, 0, 0], timestamp);
+            redraw(ctx_sketch, canvas_sketch);
+            paint = false;
+        };
+
+        cancel = function () {
+            paint = false;
+        };
+
+        function getXY(e) {
+            x = ((e.changedTouches ? e.changedTouches[0].pageX : e.pageX) - canvas_sketch.offsetLeft) / canvas_sketch.width;
+            y = ((e.changedTouches ? e.changedTouches[0].pageY : e.pageY) - canvas_sketch.offsetTop) / canvas_sketch.height;
+            return [x, y];
+        }
+
+        function addClick(x, y, pen_state, timestamp) {
+            data.push({"coordinates": [x, y],
+                "pen_state": pen_state,
+                "timestamp": timestamp });
+        }
+
+        function redraw(draw_ctx, draw_canvas) {
+
+            draw_ctx.clearRect(0, 0, draw_canvas.width, draw_canvas.height);
+            // draw_ctx.clearRect(bbox_cor[0], bbox_cor[1], bbox_cor[2], bbox_cor[3]);
+            
+            if (data.length == 0) {
+                return;
+            }
+            x = Math.round(data[0]['coordinates'][0] * draw_canvas.width);
+            y = Math.round(data[0]['coordinates'][1] * draw_canvas.height);
+
+            draw_ctx.beginPath();
+            draw_ctx.moveTo(x, y);
+            prev = false;
+            for (let i=1; i<data.length; i++) {
+
+                x = Math.round(data[i]['coordinates'][0] * draw_canvas.width);
+                y = Math.round(data[i]['coordinates'][1] * draw_canvas.height);
+                pen_state = data[i]['pen_state'];
+                
+                if (pen_state[0] == 0 && pen_state[1] == 1) {
+                    if (prev == false) {
+                        draw_ctx.beginPath();
+                        draw_ctx.moveTo(x, y);
+                        prev = true;
+                    }
+                    else {
+                        draw_ctx.lineTo(x, y);
+                    }
+                }
+                else {
+                    draw_ctx.stroke();
+                    prev = false;
+                }
+            }
+            draw_ctx.stroke();
+        }
+
+        canvas_sketch.addEventListener("mousedown", press, false);
+        canvas_sketch.addEventListener("mousemove", drag, false);
+        canvas_sketch.addEventListener("mouseup", release, false);
+        canvas_sketch.addEventListener("mouseout", cancel, false);  
+
+        canvas_sketch.addEventListener("touchstart", press, false);
+        canvas_sketch.addEventListener("touchmove", drag, false);
+        canvas_sketch.addEventListener("touchend", release, false);
+        canvas_sketch.addEventListener("touchcancel", cancel, false);
+
+        function click_btn_fn(){
+            
+                let img = new Image;
+                const post_json = {"user": String(user_id)};
+
+                let xhr = new XMLHttpRequest();
+                xhr.open("POST", server_url+"/getvideo", true);
+                xhr.setRequestHeader('X-PINGOTHER', 'pingpong');
+                xhr.setRequestHeader("Content-Type", "application/json");
+                xhr.setRequestHeader("Access-Control-Allow-Origin", "*");
+                xhr.setRequestHeader("Access-Control-Allow-Methods", "POST");
+                xhr.setRequestHeader("Access-Control-Allow-Credentials", "true");
+                xhr.onreadystatechange = function () {
+                    
+                    var response_data = xhr.responseText;
+                    img.onload = function() {
+                        canvas.width = Math.round(document.body.offsetWidth * 0.5);
+                        canvas.height = Math.round(canvas.width*0.5625);
+                        ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, canvas.width, canvas.height);
+                        wait_img();
+                    }
+                    
+                    if (response_data == "None") {
+                        alert("All images annotated. Thank you");
+                        return;
+                    }
+                    else if (response_data == "User_ID not recognised") {
+                        alert("User_ID not recognised. Please reload page and enter User_ID correctly."); 
+                        return;
+                    } else {
+
+                        response_data = JSON.parse(response_data);
+                        
+                        img_url = response_data['img_url'];
+                                      
+                        img_idx = parseInt(response_data['index']);                    
+                        img.src = server_url + img_url;
+                        
+                    }
+                }
+                xhr.send(JSON.stringify(post_json));
+                // wait_sketch();    
+            }
+        
+        function wait_img(){
+
+            canvas.style.display = "inline-block";
+            canvas_title.style.display = "inline-block";
+            canvas_title.textContent = "Image "+ (img_idx+1) +" out of 100."
+            btn_next.disabled = true;
+            btn_draw.style.display = "inline-block";
+
+        }
+
+        function draw_btn_fn(){
+            //canvas disappear
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            canvas.style.display = "none";
+            canvas_title.style.display = "none";
+
+            //show canvas for sketch
+            canvas_sketch.width = Math.round(document.body.offsetWidth * 0.5);
+            canvas_sketch.height = Math.round(canvas_sketch.width*0.66); //0.5625);
+            canvas_sketch.style.display = "inline-block";
+
+            canvas_title.style.display = "inline-block";
+            canvas_title.textContent = "Please Draw a Sketch in the canvas."
+            sketch_title.style.display = "inline-block";
+            sketch_title.textContent = "If you finish the (Sketch), enter 'Verify' button. Else you can redraw the sketch using 'Redo' button."
+
+            record_stroke = true;
+            btn_draw.style.display = "none";
+
+            btn_clear.style.display = "inline-block";
+            btn_redo.style.display = "inline-block";
+            btn_verify.style.display = "inline-block";
+            //btn_accept.style.display = "inline-block";
+
+        }
+
+        function verify_btn_fn() {
+            paint = false;
+            canvas.width = Math.round(document.body.offsetWidth * 0.35);
+            canvas.height = Math.round(canvas.width*0.5625);
+            canvas_sketch.width = Math.round(document.body.offsetWidth * 0.35);
+            canvas_sketch.height = Math.round(canvas_sketch.width*0.5625);
+            canvas.style.display = "inline-block";
+            canvas_sketch.style.display = "inline-block";
+
+            canvas_title.style.display = "none";
+            sketch_title.style.display = "inline-block";
+            sketch_title.textContent = "If you are happy with the (Sketch), enter 'Accept' button. Else you can redraw the sketch using 'Redo' button."
+
+            btn_accept.style.display = "inline-block";
+            btn_redo.style.display = "inline-block";
+            btn_clear.style.display = "none";
+            
+            let img = new Image;
+            img.onload = function() {
+                ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, canvas.width, canvas.height);
+                redraw(ctx_sketch, canvas_sketch);
+            }
+            img.src = server_url+img_url;
+        }
+
+        function clear_btn_fn() {
+            if (data.length == 0) {
+                redraw(ctx_sketch, canvas_sketch);
+                return;
+            }
+            data.splice(data.length-1, 1);
+            for (let i = data.length-1; i>=0; i--) {
+                if (data[i]["pen_state"][0] == 0 && data[i]["pen_state"][1] == 1) {
+                    data.splice(i, 1);
+                } else {
+                    redraw(ctx_sketch, canvas_sketch);
+                    return;
+                }
+            }
+            redraw(ctx_sketch, canvas_sketch);
+        };
+
+        function accept_btn_fn() {
+            const post_json = {
+                "user": user_id,
+                "img_url": img_url,
+                "sketch_data": data,
+            };
+            
+            let xhr = new XMLHttpRequest();
+            xhr.open("POST", server_url+"/submitvideo", true);
+            xhr.setRequestHeader('X-PINGOTHER', 'pingpong');
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.setRequestHeader("Access-Control-Allow-Origin", "*");
+            xhr.setRequestHeader("Access-Control-Allow-Methods", "POST");
+            xhr.setRequestHeader("Access-Control-Allow-Credentials", "true");
+            xhr.onreadystatechange = function () {
+                console.log(xhr.responseText);
+                responseText = xhr.responseText;
+                if (responseText == "User Not Found") {
+                    alert ("User Not Found. Please reload page and enter User_ID correctly.");
+                } else if (responseText == "Img URL Not Found") {
+                    alert ("Image Not Recognised. Please contact admin.")
+                }
+                canvas.style.display = "none";
+                canvas_sketch.style.display = "none";
+                canvas_title.style.display = "none";
+                sketch_title.style.display = "none";
+                record_stroke = false;
+                btn_next.disabled = false;
+                btn_accept.style.display = "none";
+                btn_redo.style.display = "none";
+                btn_verify.style.display = "none";
+                btn_clear.style.display = "none";
+            
+                data = []; // Reset Data
+                start_time = -1;
+            }
+            xhr.send(JSON.stringify(post_json));
+        }
+
+        function redo_btn_fn() {
+            //canvas disappear
+            ctx_sketch.clearRect(0, 0, canvas_sketch.width, canvas_sketch.height);
+            canvas_sketch.style.display = "none";
+            canvas_title.style.display = "none";
+            sketch_title.style.display = "none";
+            data = [];
+            btn_accept.style.display = "none";
+            btn_clear.style.display = "none";
+            btn_redo.style.display = "none";
+            btn_verify.style.display = "none";
+            
+            start_time = -1;
+            click_btn_fn();
+        }
+
+    </script>
+</div>
